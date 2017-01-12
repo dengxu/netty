@@ -62,9 +62,12 @@ import io.netty.util.ReferenceCounted;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.nio.channels.ClosedChannelException;
 import java.security.KeyStore;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class SslHandlerTest {
 
@@ -370,5 +373,30 @@ public class SslHandlerTest {
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
         }
+    }
+
+    @Test(timeout = 5000)
+    public void testEventsFired() throws Exception {
+        SSLEngine engine = SSLContext.getDefault().createSSLEngine();
+        final BlockingQueue<SslCompletionEvent> events = new LinkedBlockingQueue<SslCompletionEvent>();
+        EmbeddedChannel channel = new EmbeddedChannel(new SslHandler(engine), new ChannelInboundHandlerAdapter() {
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+                if (evt instanceof SslCompletionEvent) {
+                    events.add((SslCompletionEvent) evt);
+                }
+            }
+        });
+        assertTrue(events.isEmpty());
+        assertTrue(channel.finishAndReleaseAll());
+
+        SslCompletionEvent evt = events.take();
+        assertTrue(evt instanceof SslHandshakeCompletionEvent);
+        assertTrue(evt.cause() instanceof ClosedChannelException);
+
+        evt = events.take();
+        assertTrue(evt instanceof SslCloseCompletionEvent);
+        assertTrue(evt.cause() instanceof ClosedChannelException);
+        assertTrue(events.isEmpty());
     }
 }
