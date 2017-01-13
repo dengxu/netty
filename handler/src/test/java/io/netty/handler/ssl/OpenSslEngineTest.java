@@ -38,6 +38,10 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String PREFERRED_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http2";
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
+    public OpenSslEngineTest(BufferType type) {
+        super(type);
+    }
+
     @BeforeClass
     public static void checkOpenSsl() {
         assumeTrue(OpenSsl.isAvailable());
