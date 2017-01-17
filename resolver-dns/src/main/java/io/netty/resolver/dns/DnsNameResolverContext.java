@@ -518,9 +518,31 @@ abstract class DnsNameResolverContext<T> {
             trace.append(cname);
         }
 
+        boolean queryARecord = false;
+        boolean queryAAAARecord = false;
+        for (InternetProtocolFamily family: resolveAddressTypes) {
+            switch (family) {
+                case IPv4:
+                    queryARecord = true;
+                    break;
+                case IPv6:
+                    queryAAAARecord = true;
+                    break;
+                default:
+                    throw new Error();
+            }
+        }
+
+        // One of both must be always true.
+        assert queryARecord || queryAAAARecord;
+
         final InetSocketAddress nextAddr = nameServerAddrs.next();
-        query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.A), promise);
-        query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.AAAA), promise);
+        if (queryARecord) {
+            query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.A), promise);
+        }
+        if (queryAAAARecord) {
+            query(nextAddr, new DefaultDnsQuestion(cname, DnsRecordType.AAAA), promise);
+        }
     }
 
     private void addTrace(InetSocketAddress nameServerAddr, String msg) {
